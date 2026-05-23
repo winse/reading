@@ -30,7 +30,7 @@ metadata:
 | 文件 | 说明 |
 |------|------|
 | `{book-slug}-notes.html` | 单本书的读书笔记 |
-| `reading-notes.html` | 读书笔记目录首页 |
+| `index.html` | 读书笔记目录首页 |
 | `notes.css` | 通用样式文件（所有笔记共用） |
 
 ## HTML 模板
@@ -38,7 +38,7 @@ metadata:
 ```html
 <h1>《书名》读书笔记</h1>
 <a class="book-link" href="weread://reading?bId={bookId}">打开书籍</a>
-<a class="book-link" href="reading-notes.html" style="background:#666">返回目录</a>
+<a class="book-link" href="index.html" style="background:#666">返回目录</a>
 
 <!-- 我的心得 -->
 <div class="intro-section">
