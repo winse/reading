@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>《Claude Code橙皮书》读书笔记</title>
+    <link rel="stylesheet" href="notes.css">
+</head>
+<body>
+
+<h1>《Claude Code橙皮书》读书笔记</h1>
+<a class="book-link" href="weread://reading?bId=3300199881">打开书籍</a>
+<a class="book-link" href="reading-notes.html" style="background:#666;margin-left:10px;">返回目录</a>
+
+<!-- ============================================
+     第一部分：我的心得
+     ============================================ -->
+<div class="intro-section">
+<h2>写在前面：我的 Claude Code 使用心得</h2>
+
+<p>结合本书内容与实践经验，总结几点最有效的用法：</p>
+
+<ol>
+<li><strong>把它当搭档，而不是工具</strong><br>
+不要只是下指令，把困惑、犹豫、不确定都告诉它。你描述问题的过程往往就是理清思路的过程。</li>
+
+<li><strong>每次只做一件事，给清楚上下文</strong><br>
+「帮我重构这个模块」太模糊。「把这个 user.ts 里的登录逻辑提取出来，要求：1) 保留现有接口 2) 方便测试 3) 参考同级目录的 auth 模块风格」</li>
+
+<li><strong>验证是必须的，不要「看起来对」就过</strong><br>
+Claude Code 写代码的速度是人的 10 倍，但「看起来对」和「是对的」之间可能差很远。</li>
+
+<li><strong>写好 CLAUDE.md，让它「懂」你的项目</strong><br>
+不要一次性写完，从空文件开始。当 Claude 第一次在某处犯错，记录下来。一段时间后，这个文件就是为你量身定制的规则集。</li>
+
+<li><strong>定期开新会话，保持上下文清晰</strong><br>
+当对话变长，压缩会丢失细节。如果感觉 Claude 开始「理解偏了」，开一个新会话，把关键信息通过 CLAUDE.md 传递过去。</li>
+
+<li><strong>善用 /plan 和 /preview</strong><br>
+大改动前用 /plan 让它先给方案，确认方向对了再执行。/preview 可以预览将要执行的命令。</li>
+
+<li><strong>复杂的并行任务用 Worktree</strong><br>
+多 session 同时跑时，用 Git Worktree 隔离环境，避免互相覆盖文件。</li>
+</ol>
+
+<p><strong>特别推荐：让 AI 来采访你</strong></p>
+<p>做大功能前，告诉它：「我想做一个XX，在动手之前先采访我，问清楚所有你需要知道的事情。」</p>
+<p>这会逼你补上模糊地带：目标用户是谁？并发量预估多少？需要支持退款吗？——这些问题你可能根本没想过。采访阶段多花10分钟，省的是后面几小时的返工。</p>
+</div>
+
+<!-- ============================================
+     第二部分：书中摘录
+     ============================================ -->
+<div class="section">
+<h2 id="1">摘录 1 · 核心循环：TAOR</h2>
+
+<blockquote class="quote">
+<strong>TAOR：Think-Act-Observe-Repeat</strong>
+</blockquote>
+
+<p>Claude Code的心脏是一个叫TAOR的Agent循环：先思考当前状态，决定下一步做什么；然后调用一个工具执行操作；观察返回的结果，判断任务是不是完成了；没完成就回到Think继续循环。整个过程可能转几十圈才停下来。</p>
+
+<blockquote class="quote">
+它不是一个从输入到输出的直线程序，它是一个不断试探和调整的循环体。有时候它试了一个方案发现不行，回退换另一条路，这其实是设计的一部分，不是bug。
+</blockquote>
+</div>
+
+<div class="section">
+<h2 id="2">摘录 2 · 三层架构</h2>
+
+<p><strong>Prompt</strong>是你开口说话，<strong>Context</strong>是你提前准备好的PPT，<strong>Harness</strong>是你搭建的整个舞台。观众（Claude）的表现，取决于这三层的综合质量。</p>
+
+<table>
+<tr><th>层次</th><th>说明</th></tr>
+<tr><td><strong>Prompt层</strong></td><td>你在终端里输入的每一句话。大多数初学者的全部交互都停留在这一层。</td></tr>
+<tr><td><strong>Context层</strong></td><td>Claude在回答之前已经「看到」的所有信息：CLAUDE.md、文件结构、git历史。</td></tr>
+<tr><td><strong>Harness层</strong></td><td>Skills、Hooks、MCP、Agent Teams。一旦搭好，它就一直在工作。</td></tr>
+</table>
+
+<blockquote class="quote">
+高手的做法：尽量把信息沉淀到Context层，把重复劳动交给Harness层，只在Prompt层处理真正需要临时决策的事情。
+</blockquote>
+</div>
+
+<div class="section">
+<h2 id="3">摘录 3 · 对话式编程工作流</h2>
+
+<blockquote class="quote">
+从现在开始，你是产品经理，Claude是你的工程师。你的活是说清楚要什么，不是写代码。
+</blockquote>
+
+<p><strong>核心原则：</strong>描述需求、审查方案、确认执行、验证结果、迭代改进。<strong>五个字：信任但验证。</strong></p>
+
+<h3>需求描述三原则</h3>
+<ul>
+<li><strong>具体化：</strong>「在src/auth/目录下新增Google OAuth登录，用Better Auth库」</li>
+<li><strong>指向已有模式：</strong>「照着src/components/UserWidget.tsx做」</li>
+<li><strong>描述症状，不猜原因：</strong>「用户在session超时后登录失败」而不是「token刷新逻辑有问题」</li>
+</ul>
+</div>
+
+<div class="section">
+<h2 id="4">摘录 4 · 项目构建方法论</h2>
+
+<h3>Phase 0：先别急着写代码</h3>
+<p>让Claude采访你。问完目标用户、核心功能、技术偏好后，整理成SPEC.md。</p>
+
+<h3>Phase 1：项目初始化</h3>
+<p>一句话创建项目骨架：<code>Create a Next.js project with Tailwind CSS. Set up the basic folder structure following SPEC.md requirements.</code></p>
+
+<h3>产品开发三原则</h3>
+<ul>
+<li><strong>需求拆小，每次只给一步：</strong>先做登录确认能跑，再做数据存储，再做核心业务，最后UI。</li>
+<li><strong>先跑通最小功能，再一步步加：</strong>先做一个能跑的最简版本，自己用两天，发现真正需要什么再加。</li>
+<li><strong>不要在一个session里做太多不相关的事：</strong>每个session专注做一类事情。</li>
+</ul>
+</div>
+
+<div class="section">
+<h2 id="5">摘录 5 · 验证比开发更重要</h2>
+
+<blockquote class="quote">
+AI生成的代码需要验证，就像人写的代码需要测试一样。区别在于：人写代码一天200行，验证成本可控；Claude Code一小时2000行，如果不验证，问题会在后面以更大的成本爆发。
+</blockquote>
+
+<p><strong>每做完一步就验证。</strong>每完成一个功能模块，立刻打开浏览器或跑测试。发现问题立刻修，不要积累。</p>
+
+<h3>六个常见坑</h3>
+<ul>
+<li>需求一股脑甩给Claude</li>
+<li>不做验证就接受</li>
+<li>看着像对的就接受了</li>
+<li>过度微操</li>
+<li>上下文太杂</li>
+<li>单一session做太多事</li>
+</ul>
+</div>
+
+<div class="section">
+<h2 id="6">摘录 6 · 自动记忆与上下文管理</h2>
+
+<h3>上下文窗口与压缩</h3>
+<blockquote class="quote">
+当上下文窗口快满的时候，系统会把整个对话历史压缩成一段摘要文本。压缩是有损的。核心信息会保留，但具体措辞、边角细节、你当时的语气暗示，这些很容易在压缩过程中丢失。
+</blockquote>
+
+<blockquote class="quote">
+每压缩一次就损失一点，几次之后，最早的上下文可能只剩一个模糊的影子。长对话效果下降不是你的错觉。
+</blockquote>
+
+<h3>自动记忆维护</h3>
+<blockquote class="quote">
+Claude Code有一个后台子代理，会定期整理你的记忆文件（CLAUDE.md）。它分四步走：审阅现有内容、提取新的有用信息、整合重复条目、修剪过长的部分。目标是把记忆保持在合理大小内，大约200行左右。这就是为什么长期用Claude Code之后，你会觉得它越来越「懂你」。
+</blockquote>
+
+<h3>CLAUDE.md实操</h3>
+<p>重要的约束和要求，写进CLAUDE.md而不是只在对话里说一次。对话会被压缩，但CLAUDE.md每次都会重新读取。</p>
+</div>
+
+<div class="section">
+<h2 id="7">摘录 7 · 多Agent协作</h2>
+
+<h3>并行Session</h3>
+<blockquote class="quote">
+开5个session，你review第一个的时候其他4个还在跑，等待时间几乎降到零。
+</blockquote>
+<p>把并行工作想象成管理一个远程团队。你的工作从写代码变成了做项目管理。</p>
+
+<h3>Subagents</h3>
+<blockquote class="quote">
+Subagents最重要的特性不是「专业分工」，而是独立上下文。
+</blockquote>
+<p>在.claude/agents/目录下放一个.md文件，就定义了一个subagent。</p>
+
+<h3>Git Worktrees</h3>
+<p>每个session需要在独立的代码环境中运行，否则它们会互相覆盖文件。这就是Git Worktrees要解决的问题。</p>
+</div>
+
+<div class="section">
+<h2 id="8">摘录 8 · 扩展能力</h2>
+
+<blockquote class="quote">
+Skills教Claude怎么做事，Hooks在关键节点自动执行检查，MCP把外面的世界接进来。
+</blockquote>
+
+<table>
+<tr><th>组件</th><th>用途</th><th>选择指南</th></tr>
+<tr><td>Skills</td><td>知识和能力</td><td>需要Claude「知道什么」时用</td></tr>
+<tr><td>Commands</td><td>宏，包含预计算步骤</td><td>需要Claude「做一串事」时用</td></tr>
+<tr><td>Hooks</td><td>关键节点自动触发</td><td>总忘记跑lint？加个hook</td></tr>
+<tr><td>MCP</td><td>连接外部服务</td><td>总在手动倒腾数据？接个MCP</td></tr>
+</table>
+
+<blockquote class="quote">
+不要想着一上来就搭一套完整的扩展体系。从你最痛的那一个重复操作开始，一个一个加，慢慢你的Claude Code就变成了一个为你量身定制的工作台。
+</blockquote>
+</div>
+
+<div class="section">
+<h2 id="9">摘录 9 · CLAUDE.md最佳实践</h2>
+
+<blockquote class="quote">
+好的CLAUDE.md是从你自己的项目中「长出来」的。空文件开始，Claude犯一次错就加一条，三个月后那个文件就是你的定制护栏。
+</blockquote>
+
+<p><strong>判断标准：</strong>Claude自己能从代码里读出来的，不要写；Claude猜不到的，必须写。</p>
+
+<h3>常见反模式</h3>
+<ul>
+<li><strong>不要用@引用大文档：</strong>它会在每次会话开始时被完整嵌入，白白吃掉上下文。</li>
+<li><strong>不要只写"永远不要做X"：</strong>永远提供替代方案。</li>
+<li><strong>把CLAUDE.md当作简化代码库的强制函数：</strong>如果某个CLI命令复杂到需要写几段话解释，那说明这个命令本身需要简化。</li>
+</ul>
+</div>
+
+<div class="section">
+<h2 id="10">摘录 10 · 产品思维</h2>
+
+<blockquote class="quote">
+Claude Code能帮你写代码、调UI、配部署、修bug。但它帮不了你决定：这个产品到底应该解决什么问题？目标用户是谁？什么功能该做什么功能该砍？
+</blockquote>
+
+<blockquote class="quote">
+AI能让你的执行速度提升10倍，但方向错了，你只是以10倍速度走向错误。
+</blockquote>
+
+<p><strong>产品节奏：</strong>想法 → 1天做出MVP → 自己用3天 → 找10个人测试 → 根据反馈迭代 → 觉得还行就上架 → 数据说话</p>
+
+<p><strong>关键问题：</strong>这个产品解决什么问题？目标用户是谁？核心体验是什么？哪些功能必须有，哪些可以砍掉？</p>
+</div>
+
+<!-- ============================================
+     第三部分：实用模板
+     ============================================ -->
+<div class="section">
+<h2>实用模板</h2>
+
+<table>
+<tr><th>场景</th><th>命令</th></tr>
+<tr><td>项目初始化</td><td><code>Create a Next.js project with Tailwind CSS. Set up the basic folder structure following SPEC.md requirements.</code></td></tr>
+<tr><td>加入新项目</td><td><code>I want to build a weekly report tool. Before writing any code, interview me to understand the requirements.</code></td></tr>
+<tr><td>部署</td><td><code>Deploy this project to Vercel. Set up the environment variables for GitHub OAuth, Claude API key, and Slack bot token.</code></td></tr>
+<tr><td>验证截图反馈</td><td><code>Here's a screenshot of the current report page. Issues: 1) The header is too cramped 2) The commit list needs better spacing</code></td></tr>
+<tr><td>加MCP</td><td><code>Add a Slack MCP server so the generated report can be automatically posted to #team-updates channel.</code></td></tr>
+<tr><td>加pre-commit hook</td><td><code>Set up a pre-commit hook that runs ESLint and TypeScript type checking. If there are errors, fix them before committing.</code></td></tr>
+</table>
+</div>
+
+<p class="footer">
+读书笔记 &middot; 微信读书划线整理 &middot; <a href="weread://reading?bId=3300199881">打开原书</a>
+</p>
+
+</body>
+</html>
